@@ -232,12 +232,21 @@ const doc = db.users.get(id);             // User & { _id: string } | undefined
 
 ## Performance
 
-- All data is held in memory — reads (`get`, `all`, `find`) are fast regardless of storage backend
-- Indexed search (`find`) uses sorted data structures, not full scans
-- `addMany` writes to disk once at the end, making it significantly faster than individual `add` calls for bulk inserts
-- With file persistence, every `add`, `update`, and `remove` writes the full collection to disk — use `addMany` for bulk operations
+Indexed search uses sorted data structures, not full scans.
+
+### In-memory mode
+
+- No I/O — all operations work with in-memory data structures only
+- Data is lost when the process exits
+- Best for temporary data, caches, or browser environments
+
+### File persistence
+
+- Data is loaded from disk into memory on startup, then all reads (`get`, `all`, `find`) are served from memory
+- Every `add`, `update`, and `remove` writes the full collection to disk
+- `addMany` batches into a single write — significantly faster for bulk inserts
 - Indexes are rebuilt from data on load, so there is no index corruption risk
-- In-memory mode has no I/O overhead at all
+- Best for small to medium datasets that need to survive restarts
 
 ## License
 
