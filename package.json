@@ -19,11 +19,31 @@
   "keywords": [
     "database",
     "json",
+    "json-database",
+    "indexed",
     "index",
-    "typescript"
+    "search",
+    "schema",
+    "validation",
+    "typescript",
+    "node",
+    "browser",
+    "esm",
+    "no-dependencies",
+    "embedded-database",
+    "file-persistence",
+    "in-memory"
   ],
-  "author": "",
+  "author": "bc.josefjadrny@gmail.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josefjadrny/js-idb.git"
+  },
+  "homepage": "https://github.com/josefjadrny/js-idb#readme",
   "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "devDependencies": {
     "@eslint/js": "^9.39.2",
