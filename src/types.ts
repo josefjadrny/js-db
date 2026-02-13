@@ -26,7 +26,7 @@ export type InferDocument<S extends Schema> = {
   [K in keyof S]: InferFieldType<S[K]['type']>;
 };
 
-export type Document<S extends Schema> = InferDocument<S> & { _id: string };
+export type Document<T> = T & { _id: string };
 
 export interface CollectionConfig {
   schema: Schema;

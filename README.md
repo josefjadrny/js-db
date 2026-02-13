@@ -89,6 +89,54 @@ Fields support four types: `string`, `number`, `boolean`, `object`.
 - `object` is a special type for holding arbitrary data — nesting is allowed, but no indexing, search, or type checking is performed on its contents
 - All fields are required on `add` (unless they have a `default`), partial updates are allowed on `update`
 
+## TypeScript
+
+Types are inferred from the schema automatically:
+
+```ts
+const db = createDB({
+  collections: {
+    users: {
+      schema: {
+        name: { type: "string", index: true },
+        age: { type: "number" },
+      },
+    },
+  },
+});
+
+const doc = db.users.add({ name: "Josef", age: 30 });
+doc.name; // string
+doc.age;  // number
+doc._id;  // string
+```
+
+For more control (e.g. making fields with defaults optional), provide your own interface via a type parameter:
+
+```ts
+interface User {
+  name: string;
+  age: number;
+  active?: boolean; // optional — schema has default: true
+}
+
+const db = createDB<{ users: User }>({
+  collections: {
+    users: {
+      schema: {
+        name: { type: "string", index: true },
+        age: { type: "number" },
+        active: { type: "boolean", default: true },
+      },
+    },
+  },
+});
+
+db.users.add({ name: "Josef", age: 30 }); // active is optional
+db.users.update(id, { age: 31 });         // Partial<User>
+const doc = db.users.get(id);             // User & { _id: string } | undefined
+```
+
 ## License
 
 MIT

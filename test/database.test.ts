@@ -1,7 +1,7 @@
 import { createDB } from '../src/database.js';
 import { Collection } from '../src/collection.js';
 import { Index } from '../src/index-store.js';
-import { MemoryAdapter, FileAdapter } from '../src/storage.js';
+import { MemoryAdapter } from '../src/storage.js';
 import { generateId } from '../src/id.js';
 import { validateRecord, validateSchema } from '../src/validation.js';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -424,7 +424,7 @@ describe('Collection', () => {
       score: { type: 'number' as const, default: 0 },
     }, new MemoryAdapter());
 
-    const doc = col.add({ name: 'Test' } as any);
+    const doc = col.add({ name: 'Test' });
     expect(doc.name).toBe('Test');
     expect(doc.active).toBe(true);
     expect(doc.score).toBe(0);
@@ -436,7 +436,7 @@ describe('Collection', () => {
       active: { type: 'boolean' as const, default: true },
     }, new MemoryAdapter());
 
-    const doc = col.add({ name: 'Test', active: false } as any);
+    const doc = col.add({ name: 'Test', active: false });
     expect(doc.active).toBe(false);
   });
 
@@ -447,8 +447,8 @@ describe('Collection', () => {
     }, new MemoryAdapter());
 
     const docs = col.addMany([
-      { name: 'A' } as any,
-      { name: 'B', active: false } as any,
+      { name: 'A' },
+      { name: 'B', active: false },
     ]);
     expect(docs[0]!.active).toBe(true);
     expect(docs[1]!.active).toBe(false);
@@ -460,7 +460,7 @@ describe('Collection', () => {
       active: { type: 'boolean' as const, default: true, index: true },
     }, new MemoryAdapter());
 
-    col.add({ name: 'Test' } as any);
+    col.add({ name: 'Test' });
     expect(col.find({ active: 'true' })).toHaveLength(1);
   });
 });
@@ -572,5 +572,111 @@ describe('FileAdapter persistence', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Type inference
+// ---------------------------------------------------------------------------
+describe('Type inference', () => {
+  interface User {
+    name: string;
+    age: number;
+    active?: boolean;
+    meta?: Record<string, unknown>;
+  }
 
+  const userSchema = {
+    name: { type: 'string' as const, index: true },
+    age: { type: 'number' as const },
+    active: { type: 'boolean' as const, default: true },
+    meta: { type: 'object' as const, default: {} },
+  };
 
+  test('schema-inferred types (no explicit generic)', () => {
+    const db = createDB({
+      collections: {
+        users: {
+          schema: {
+            name: { type: 'string', index: true },
+            age: { type: 'number' },
+          },
+        },
+      },
+    });
+
+    const doc = db.users.add({ name: 'Josef', age: 30 });
+
+    // Types inferred from schema
+    const name: string = doc.name;
+    const age: number = doc.age;
+    const id: string = doc._id;
+
+    expect(name).toBe('Josef');
+    expect(age).toBe(30);
+    expect(id).toBeDefined();
+  });
+
+  test('explicit type map via createDB<{ users: User }>', () => {
+    const db = createDB<{ users: User }>({
+      collections: {
+        users: { schema: userSchema },
+      },
+    });
+
+    // active is optional in User interface (has default in schema)
+    const doc = db.users.add({ name: 'Josef', age: 30 });
+
+    const name: string = doc.name;
+    const age: number = doc.age;
+    const id: string = doc._id;
+
+    expect(name).toBe('Josef');
+    expect(age).toBe(30);
+    expect((doc as any).active).toBe(true);
+    expect(id).toBeDefined();
+  });
+
+  test('explicit type map — update accepts Partial<User>', () => {
+    const db = createDB<{ users: User }>({
+      collections: {
+        users: { schema: userSchema },
+      },
+    });
+
+    const doc = db.users.add({ name: 'Josef', age: 30 });
+    const updated = db.users.update(doc._id, { age: 31 });
+
+    const age: number = updated.age;
+    expect(age).toBe(31);
+  });
+
+  test('explicit type map — get/all/find return typed documents', () => {
+    const db = createDB<{ users: User }>({
+      collections: {
+        users: { schema: userSchema },
+      },
+    });
+
+    db.users.add({ name: 'Josef', age: 30 });
+
+    const all = db.users.all();
+    const name: string = all[0]!.name;
+    expect(name).toBe('Josef');
+
+    const found = db.users.get(all[0]!._id);
+    expect(found).toBeDefined();
+    const foundName: string = found!.name;
+    expect(foundName).toBe('Josef');
+  });
+
+  test('collection() method preserves types', () => {
+    const db = createDB<{ users: User }>({
+      collections: {
+        users: { schema: userSchema },
+      },
+    });
+
+    db.users.add({ name: 'Josef', age: 30 });
+    const col = db.collection('users');
+    const name: string = col.all()[0]!.name;
+    expect(name).toBe('Josef');
+  });
+});

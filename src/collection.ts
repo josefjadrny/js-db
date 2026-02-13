@@ -1,16 +1,16 @@
-import type { Schema, Document, InferDocument, StorageAdapter } from './types.js';
+import type { Schema, Document, StorageAdapter } from './types.js';
 import { Index } from './index-store.js';
 import { generateId } from './id.js';
 import { validateRecord } from './validation.js';
 
-export class Collection<S extends Schema> {
+export class Collection<T = Record<string, unknown>> {
   readonly name: string;
-  private schema: S;
+  private schema: Schema;
   private data: Map<string, Record<string, unknown>>;
   private indexes: Map<string, Index>;
   private storage: StorageAdapter;
 
-  constructor(name: string, schema: S, storage: StorageAdapter) {
+  constructor(name: string, schema: Schema, storage: StorageAdapter) {
     this.name = name;
     this.schema = schema;
     this.storage = storage;
@@ -62,11 +62,11 @@ export class Collection<S extends Schema> {
     return result;
   }
 
-  private toDocument(id: string, record: Record<string, unknown>): Document<S> {
-    return { _id: id, ...record } as Document<S>;
+  private toDocument(id: string, record: Record<string, unknown>): Document<T> {
+    return { _id: id, ...record } as Document<T>;
   }
 
-  add(record: Partial<InferDocument<S>>): Document<S> {
+  add(record: T): Document<T> {
     const withDefaults = this.applyDefaults(record as Record<string, unknown>);
     validateRecord(withDefaults, this.schema, false);
 
@@ -86,8 +86,8 @@ export class Collection<S extends Schema> {
   }
 
   /** Single save at the end instead of per-record */
-  addMany(records: Partial<InferDocument<S>>[]): Document<S>[] {
-    const docs: Document<S>[] = [];
+  addMany(records: T[]): Document<T>[] {
+    const docs: Document<T>[] = [];
 
     for (const record of records) {
       const withDefaults = this.applyDefaults(record as Record<string, unknown>);
@@ -111,18 +111,18 @@ export class Collection<S extends Schema> {
     return docs;
   }
 
-  get(id: string): Document<S> | undefined {
+  get(id: string): Document<T> | undefined {
     const record = this.data.get(id);
     if (!record) return undefined;
     return this.toDocument(id, record);
   }
 
-  all(): Document<S>[] {
+  all(): Document<T>[] {
     return [...this.data.entries()].map(([id, record]) => this.toDocument(id, record));
   }
 
   /** All queried fields must be indexed. Compound queries intersect results. */
-  find(query: Record<string, string>): Document<S>[] {
+  find(query: Record<string, string>): Document<T>[] {
     const queryEntries = Object.entries(query);
     if (queryEntries.length === 0) {
       return this.all();
@@ -154,7 +154,7 @@ export class Collection<S extends Schema> {
     return [...resultIds!].map(id => this.get(id)!);
   }
 
-  update(id: string, partial: Partial<InferDocument<S>>): Document<S> {
+  update(id: string, partial: Partial<T>): Document<T> {
     const existing = this.data.get(id);
     if (!existing) {
       throw new Error(`Record "${id}" not found`);
