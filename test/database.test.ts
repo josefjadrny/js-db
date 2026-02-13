@@ -49,6 +49,26 @@ describe('validateSchema', () => {
       meta: { type: 'object' },
     })).not.toThrow();
   });
+
+  test('accepts schema with valid defaults', () => {
+    expect(() => validateSchema({
+      name: { type: 'string', default: '' },
+      age: { type: 'number', default: 0 },
+      active: { type: 'boolean', default: true },
+      meta: { type: 'object', default: {} },
+    })).not.toThrow();
+  });
+
+  test('rejects default with wrong type', () => {
+    expect(() => validateSchema({ active: { type: 'boolean', default: 'yes' } }))
+      .toThrow('default must be of type boolean');
+    expect(() => validateSchema({ age: { type: 'number', default: '5' } }))
+      .toThrow('default must be of type number');
+    expect(() => validateSchema({ name: { type: 'string', default: 42 } }))
+      .toThrow('default must be of type string');
+    expect(() => validateSchema({ meta: { type: 'object', default: 'nope' } }))
+      .toThrow('default must be a plain object');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -100,11 +120,11 @@ describe('validateRecord', () => {
     )).toThrow('must be of type number');
   });
 
-  test('rejects nested objects in object fields', () => {
+  test('allows nested objects in object fields', () => {
     expect(() => validateRecord(
-      { name: 'Josef', age: 30, active: true, meta: { nested: { deep: 1 } } },
+      { name: 'Josef', age: 30, active: true, meta: { nested: { deep: { deeper: 1 } } } },
       schema, false,
-    )).toThrow('nested object');
+    )).not.toThrow();
   });
 
   test('rejects arrays for object fields', () => {
@@ -395,6 +415,53 @@ describe('Collection', () => {
     col.clear();
     expect(col.count).toBe(0);
     expect(col.all()).toHaveLength(0);
+  });
+
+  test('add applies defaults for missing fields', () => {
+    const col = new Collection('items', {
+      name: { type: 'string' as const },
+      active: { type: 'boolean' as const, default: true },
+      score: { type: 'number' as const, default: 0 },
+    }, new MemoryAdapter());
+
+    const doc = col.add({ name: 'Test' } as any);
+    expect(doc.name).toBe('Test');
+    expect(doc.active).toBe(true);
+    expect(doc.score).toBe(0);
+  });
+
+  test('add allows overriding defaults', () => {
+    const col = new Collection('items', {
+      name: { type: 'string' as const },
+      active: { type: 'boolean' as const, default: true },
+    }, new MemoryAdapter());
+
+    const doc = col.add({ name: 'Test', active: false } as any);
+    expect(doc.active).toBe(false);
+  });
+
+  test('addMany applies defaults', () => {
+    const col = new Collection('items', {
+      name: { type: 'string' as const },
+      active: { type: 'boolean' as const, default: true },
+    }, new MemoryAdapter());
+
+    const docs = col.addMany([
+      { name: 'A' } as any,
+      { name: 'B', active: false } as any,
+    ]);
+    expect(docs[0]!.active).toBe(true);
+    expect(docs[1]!.active).toBe(false);
+  });
+
+  test('defaults are indexed', () => {
+    const col = new Collection('items', {
+      name: { type: 'string' as const, index: true },
+      active: { type: 'boolean' as const, default: true, index: true },
+    }, new MemoryAdapter());
+
+    col.add({ name: 'Test' } as any);
+    expect(col.find({ active: 'true' })).toHaveLength(1);
   });
 });
 

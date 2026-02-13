@@ -11,6 +11,34 @@ export function validateSchema(schema: Schema): void {
     if (def.indexSetting && def.type !== 'string') {
       throw new Error(`Field "${field}": indexSetting is only valid for 'string' type fields`);
     }
+    if (def.default !== undefined) {
+      validateDefaultValue(field, def.default, def.type);
+    }
+  }
+}
+
+function validateDefaultValue(field: string, value: unknown, type: string): void {
+  switch (type) {
+    case 'string':
+      if (typeof value !== 'string') {
+        throw new Error(`Field "${field}": default must be of type string, got ${typeof value}`);
+      }
+      break;
+    case 'number':
+      if (typeof value !== 'number' || Number.isNaN(value)) {
+        throw new Error(`Field "${field}": default must be of type number`);
+      }
+      break;
+    case 'boolean':
+      if (typeof value !== 'boolean') {
+        throw new Error(`Field "${field}": default must be of type boolean, got ${typeof value}`);
+      }
+      break;
+    case 'object':
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        throw new Error(`Field "${field}": default must be a plain object`);
+      }
+      break;
   }
 }
 
@@ -34,7 +62,7 @@ export function validateRecord(
     const value = record[field];
 
     if (value === undefined) {
-      if (!isPartial) {
+      if (!isPartial && def.default === undefined) {
         throw new Error(`Missing required field "${field}"`);
       }
       continue;
@@ -59,12 +87,6 @@ export function validateRecord(
       case 'object':
         if (typeof value !== 'object' || value === null || Array.isArray(value)) {
           throw new Error(`Field "${field}" must be a plain object`);
-        }
-        // Flat only — no nested objects allowed
-        for (const [k, v] of Object.entries(value)) {
-          if (typeof v === 'object' && v !== null) {
-            throw new Error(`Field "${field}.${k}" contains a nested object — only flat objects are allowed`);
-          }
         }
         break;
     }

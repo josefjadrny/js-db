@@ -50,15 +50,28 @@ export class Collection<S extends Schema> {
     this.storage.writeMeta(this.name, { schema: this.schema });
   }
 
+  private applyDefaults(record: Record<string, unknown>): Record<string, unknown> {
+    const result = { ...record };
+    for (const [field, def] of Object.entries(this.schema)) {
+      if (result[field] === undefined && def.default !== undefined) {
+        result[field] = def.type === 'object'
+          ? { ...(def.default as Record<string, unknown>) }
+          : def.default;
+      }
+    }
+    return result;
+  }
+
   private toDocument(id: string, record: Record<string, unknown>): Document<S> {
     return { _id: id, ...record } as Document<S>;
   }
 
-  add(record: InferDocument<S>): Document<S> {
-    validateRecord(record as Record<string, unknown>, this.schema, false);
+  add(record: Partial<InferDocument<S>>): Document<S> {
+    const withDefaults = this.applyDefaults(record as Record<string, unknown>);
+    validateRecord(withDefaults, this.schema, false);
 
     const id = generateId();
-    const raw = { ...record } as Record<string, unknown>;
+    const raw = withDefaults;
     this.data.set(id, raw);
 
     for (const [field, index] of this.indexes) {
@@ -73,14 +86,15 @@ export class Collection<S extends Schema> {
   }
 
   /** Single save at the end instead of per-record */
-  addMany(records: InferDocument<S>[]): Document<S>[] {
+  addMany(records: Partial<InferDocument<S>>[]): Document<S>[] {
     const docs: Document<S>[] = [];
 
     for (const record of records) {
-      validateRecord(record as Record<string, unknown>, this.schema, false);
+      const withDefaults = this.applyDefaults(record as Record<string, unknown>);
+      validateRecord(withDefaults, this.schema, false);
 
       const id = generateId();
-      const raw = { ...record } as Record<string, unknown>;
+      const raw = withDefaults;
       this.data.set(id, raw);
 
       for (const [field, index] of this.indexes) {

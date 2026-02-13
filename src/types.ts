@@ -9,6 +9,8 @@ export interface FieldDefinition {
   index?: boolean;
   /** Only valid for string fields with index: true */
   indexSetting?: IndexSetting;
+  /** Default value applied when field is omitted during add/addMany */
+  default?: unknown;
 }
 
 export type Schema = Record<string, FieldDefinition>;

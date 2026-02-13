@@ -19,7 +19,7 @@ const db = createDB({
       schema: {
         name: { type: "string", index: true, indexSetting: { ignoreCase: true } },
         age: { type: "number", index: true },
-        active: { type: "boolean" },
+        active: { type: "boolean", default: true },
         meta: { type: "object" },
       },
     },
@@ -85,8 +85,9 @@ Fields support four types: `string`, `number`, `boolean`, `object`.
 
 - `index: true` enables search on the field via `find()` (not supported for `object`)
 - `indexSetting: { ignoreCase: true }` for case-insensitive string indexes
-- `object` fields must be flat (no nesting)
-- All fields are required on `add`, partial updates are allowed on `update`
+- `default` sets a default value applied when the field is omitted during `add`/`addMany`
+- `object` is a special type for holding arbitrary data — nesting is allowed, but no indexing, search, or type checking is performed on its contents
+- All fields are required on `add` (unless they have a `default`), partial updates are allowed on `update`
 
 ## License
 
