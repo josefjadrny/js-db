@@ -278,8 +278,9 @@ describe('Collection', () => {
 
   test('add validates schema', () => {
     const col = makeCollection();
-    expect(() => (col as any).add({ name: 'Josef' })).toThrow('Missing required');
-    expect(() => (col as any).add({ name: 123, age: 30, sex: 'male' })).toThrow('must be of type string');
+    const untyped = col as Collection<Record<string, unknown>>;
+    expect(() => untyped.add({ name: 'Josef' })).toThrow('Missing required');
+    expect(() => untyped.add({ name: 123, age: 30, sex: 'male' })).toThrow('must be of type string');
   });
 
   test('addMany inserts multiple', () => {
@@ -387,7 +388,7 @@ describe('Collection', () => {
   test('update validates partial', () => {
     const col = makeCollection();
     const doc = col.add({ name: 'Josef', age: 30, sex: 'male' });
-    expect(() => (col as any).update(doc._id, { name: 123 })).toThrow('must be of type string');
+    expect(() => (col as Collection<Record<string, unknown>>).update(doc._id, { name: 123 })).toThrow('must be of type string');
   });
 
   test('update throws on missing id', () => {
@@ -509,7 +510,7 @@ describe('createDB', () => {
       },
     });
 
-    expect(() => (db as any).collection('nonexistent')).toThrow('does not exist');
+    expect(() => (db as unknown as { collection: (name: string) => unknown }).collection('nonexistent')).toThrow('does not exist');
   });
 
   test('validates schema at creation time', () => {
@@ -709,7 +710,7 @@ describe('Type inference', () => {
 
     expect(name).toBe('Josef');
     expect(age).toBe(30);
-    expect((doc as any).active).toBe(true);
+    expect((doc as unknown as Record<string, unknown>).active).toBe(true);
     expect(id).toBeDefined();
   });
 
