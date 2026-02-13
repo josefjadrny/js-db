@@ -230,6 +230,15 @@ db.users.update(id, { age: 31 });         // Partial<User>
 const doc = db.users.get(id);             // User & { _id: string } | undefined
 ```
 
+## Performance
+
+- All data is held in memory — reads (`get`, `all`, `find`) are fast regardless of storage backend
+- Indexed search (`find`) uses sorted data structures, not full scans
+- `addMany` writes to disk once at the end, making it significantly faster than individual `add` calls for bulk inserts
+- With file persistence, every `add`, `update`, and `remove` writes the full collection to disk — use `addMany` for bulk operations
+- Indexes are rebuilt from data on load, so there is no index corruption risk
+- In-memory mode has no I/O overhead at all
+
 ## License
 
 MIT
